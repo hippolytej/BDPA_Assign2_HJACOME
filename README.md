@@ -3,7 +3,7 @@ Set-Similarity Joins
 
 ![hello.png](figures/test.png)
 
-![lol.gifv](http://i.imgur.com/yuGovEJ.gifv)
+![lol.gifv](http://i.imgur.com/yuGovEJ.mp4)
 
 ## Pre-processing step
 The goal is to pre-process the document corpus of pg100.txt (from http://www.gutenberg.org/cache/epub/100/pg100.txt) to have only lines of unique words sorted by global frequency, excluding stopwords and clear of special characters.
