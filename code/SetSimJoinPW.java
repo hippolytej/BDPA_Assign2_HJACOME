@@ -53,11 +53,11 @@ public class SetSimJoinPW{
 		if ( hdfs.exists( file )) { hdfs.delete( file, true ); }
 		OutputStream os = hdfs.create(file);
 		BufferedWriter br = new BufferedWriter( new OutputStreamWriter( os, "UTF-8" ) );
-		br.write("Unique words in a single file = " + counter.getValue());
+		br.write("PW: number of comparisons = " + counter.getValue());
 		br.close();
 		hdfs.close();
 
-		System.out.println("Number of comparisons = " + counter.getValue());
+		System.out.println("PW: number of comparisons = " + counter.getValue());
 	}
 
 	public static class Map extends Mapper<LongWritable, Text, Text, Text> {

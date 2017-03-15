@@ -1,1 +1,1 @@
-Unique words in a single file = 499500
+PW: number of comparisons = 499500

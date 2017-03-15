@@ -61,7 +61,7 @@ public class PreProcessing{
 		if ( hdfs.exists( file )) { hdfs.delete( file, true ); }
 		OutputStream os = hdfs.create(file);
 		BufferedWriter br = new BufferedWriter( new OutputStreamWriter( os, "UTF-8" ) );
-		br.write("Unique words in a single file = " + counter.getValue());
+		br.write("Number of lines = " + counter.getValue());
 		br.close();
 		hdfs.close();
 
