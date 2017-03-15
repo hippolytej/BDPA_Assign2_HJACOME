@@ -3,16 +3,18 @@
 
 ![becausewhynot.jpg](figures/becausewhynot.jpg)
 
+The goal of this project is to use Hadoop MapReduce to find pairs of similar documents.
+
 ## Pre-processing step
-The goal is to pre-process the document corpus of pg100.txt (from http://www.gutenberg.org/cache/epub/100/pg100.txt) to have only lines of unique words sorted by global frequency, excluding stopwords and clear of special characters. These preprocessed lines will later on be considered as documents for set similarity joins.
+In this preliminary step we process the document corpus of pg100.txt (from http://www.gutenberg.org/cache/epub/100/pg100.txt) to have only lines of unique words sorted by global frequency, excluding stopwords and clear of special characters. These preprocessed lines will later on be considered as documents for set similarity joins.
 
 To achieve this pre-processing step, we call on the ``stopwords.csv`` file from assignment 1 as well as the ``wordcount.txt`` file from assignment 0.
 We also implement a counter that fetches the total number of lines and saves it on HDFS.
 
 ### Method
 Our approach is the following:
-- Main: After having declared a custom counter for the number of lines, the main class runs the Hadoop jobs, and saves the output of the counter of HDFS.
-- Mapper: first we implement a ``setup`` class that reads the ``stopwords.csv`` file and stores the words in a single string. Since the default key used by the mapper is the byte offset to the input line, we then create our own ``lineNumber`` variable that is incremented at each call and used as the output key. Finally the `mapper` writes a key-word pair for each word based on the aformentionned conditions.
+- Main: After having declared a custom counter for the number of lines, the main class runs the Hadoop jobs, and saves the output of the counter in a text file on HDFS.
+- Mapper: first we implement a ``setup`` class that reads the ``stopwords.csv`` file and stores its items in a single string. Since the default key used by the mapper is the byte offset to the input line, we then create our own ``lineNumber`` variable that is incremented at each call and used as the output key. Finally the `mapper` writes a key-word pair for each word based on the aformentionned conditions.
 - Reducer: first we implement a ``setup`` class that reads the ``wordcount.txt`` file and stores its (word, count) pairs in a hashmap. For each key, the ``reducer`` then sorts the values (here, the filterd words of a line) using the wordcount hashmap, and saves them in a string that is eventually outputed in Text format.
 
 #### Main
@@ -162,8 +164,8 @@ There are 114,413 lines according to the counter. Since we are running on pseudo
 
 ## Set-similarity joins
 We aim at finding all the document (or here, lines) pairs that are similar according to the Jaccard metric with a threshold of 0.8. We will do this using first the brute force method of pairwise comparisons, and second an indexing approach following the works of [Chaudhuri et al. 2006].
-In both cases we report the number of performed comparisons in a file on HDFS.
-We will report below our approaches for both methods and report and compare the results as a conclusion.
+In both cases we report the number of performed comparisons in a file on HDFS unsing counters.
+We will report below our approaches for both methods and discuss the results as a conclusion.
 
 The Jaccard similarity of two sets is defined by:
 > sim(d1, d2) = Jaccard(d1, d2) = |d1 Ո d2| / |d1 U d2|,
@@ -199,8 +201,8 @@ public double jaccard(HashSet<String> hs1, HashSet<String> hs2) {
 
 ### Pairwise comparisons
 The approach here is rather straightforward:
-- Mapper: A `setup` class first loads all the line numbers in the `kheys` list. For each value, the map class outputs as a key the sorted combination of its own line number with every other in Text format, and the content of the document as value. By sorting the line numbers we make sure that the pairs will match, but perhaps a more refined method would have been to implement our own ``WritableComparable`` to make the pairs.
-- Reducer: We store the content of a document pair into a list before parsing their respective contents into HashSets with tokanizers. We then compute the Jaccard similarity of these two sets, and output only the "similar" pairs and their content on hdfs.
+- Mapper: A `setup` class first loads all the line numbers in the `kheys` list. For each value, the map class outputs as a key the sorted combination of its own line number with every other in Text format, and the content of the document as value. By sorting the line numbers we make sure that the pairs will match, but perhaps a more refined method would have been to implement our own ``WritableComparable`` to output the pairs.
+- Reducer: We store the content of a documents pair into a list before parsing their respective contents into HashSets with tokanizers. We then compute the Jaccard similarity of these two sets, and output only the "similar" pairs keys and their content on hdfs.
 
 #### Mapper
 ```java
@@ -301,7 +303,7 @@ public static class Reduce extends Reducer<Text, Text, Text, Text> {
 Here the idea is to avoid pointless comparisons by previously indexing the words: a given word is indexed with all the ids of the documents that contain it. This allows us to look for similar pairs only among the indexed ids of a given word. [Chaudhuri et al. 2006] have shown that, having sorted the words by incresing order of global frequency, it is sufficient to index only the |d| - ⌈t*|d|⌉ + 1 first words of a document, where t is the Jaccard similarity threshold (0.8 here) and |d| is the number of words in d.
 Here is our method:
 - Mapper: simply get the value's line id, parse and subset its content using [Chaudhuri et al. 2006]'s magical rule, and index each of the few chosen words with the id.
-- Reducer: From a given document's id, we have to be able to retrieve the content. The first step is thus to load the document ids and contents in a `keyWords` HashMap with the ``setup`` class. Then, for a given word, all the index ids are stored in the ``billyTheKeys`` list, that we go through with imbricated for loops to make the pairs. The pairs are Jaccard-compared using the values from our ``keyWords`` HashMap, and bingos are outputed in the same fashion as above.
+- Reducer: From a given document's id, we have to be able to retrieve the content. The first step is thus to load the document ids and contents in a `keyWords` HashMap with the ``setup`` class. Then, for a given word, all the index ids are stored in the ``billyTheKeys`` list, that we go through with imbricated ``for`` loops to make the pairs. The latter are Jaccard-compared using the values from our ``keyWords`` HashMap, and bingos are outputed in the same fashion as above.
 
 #### Mapper
 ```java
@@ -414,21 +416,22 @@ public static class Reduce extends Reducer<Text, Text, Text, Text> {
 ![II.png](figures/II.png)
 
 ### Results
-The output of both jobs can be found respectively in the `ssj_pw.txt` and `ssj_ii.txt` files. While we find the same 16 pairs for both, it is significant that the Inverted Index method yielded 25 matches with 7 unique couples and 9 (or 18) duplicates. Indeed, as soon as the indexed subsets of two similar documents' content have words in common, both these words are sent to the mapper with the two keys, resulting in the pair beeing evaluated twice. While here this behaviour is neglectable because the documents have few items and the similarity threshold is high (only one word is indexed for a line of 4), it might become a problem at a larger scale.
+The output of both jobs can be found respectively in the `ssj_pw.txt` and `ssj_ii.txt` files. While we find the same 16 pairs for both, it is significant that the Inverted Index method yielded 25 matches with 7 unique couples and 9 (or 18) duplicates. Indeed, as soon as the indexed subsets of two similar documents' content have words in common, these words are sent to the mapper with both ids, resulting in the pair beeing evaluated twice. While here this behaviour is neglectable because the documents have few items and the similarity threshold is high (only one word is indexed for a line of 4 items), it might become a problem at a larger scale.
 
 ### Comparing the two methods
-Here are the summed up performances of both methods:
+Here are the summed up performances for both methods:
 
-Method              | Number of performed comparisons | Execution Time (sec.)  | Elapsed Time (sec.)
+Method              | Number of Performed Comparisons | Execution Time (sec.)  | Elapsed Time (sec.)
 ------------------- | ------------------------------- | ---------------------- | -------------------
-Paiwise comparison  | 499,500                         | 27                     | 21                 
+Pairwise Comparison | 499,500                         | 27                     | 21                 
 Inverted Index      | 276                             | 21                     | 15                 
 
 We see that even on our small sample the difference in execution times is already significant (inverted indexing is 20% faster) as we have divided the number of comparison by almost 2,000!
 We also notice that maths still work as we do have n*(n-1)/2 pairwise comparison, which is extremely satisfying.
 
 ## Conclusion
-As peviously said there is still room for improvement, starting with implementing a custom WritableComparable for key pairs and solving the duplicate problem of inverted indexing.
+In this assignment we have seen how Hadoop MapReduce can be efficiently used to perform set similarity joins, going from a naive approach to a more elaborate one.
+As peviously said there is room for improvement, starting with implementing a custom WritableComparable for key pairs and solving the duplicate problem of inverted indexing.
 
 ## References
 >S. Chaudhuri, V. Ganti, and R. Kaushik. A primitive operator for similarity joins in data cleaning. In Proceedings of the 22nd International Conference on Data Engineering, ICDE 2006, 3-8 April 2006, Atlanta, GA, USA, page 5, 2006.
