@@ -417,11 +417,12 @@ public static class Reduce extends Reducer<Text, Text, Text, Text> {
 The output of both jobs can be found respectively in the `ssj_pw.txt` and `ssj_ii.txt` files. While we find the same 16 pairs for both, it is significant that the Inverted Index method yielded 25 matches with 7 unique couples and 9 (or 18) duplicates. Indeed, as soon as the indexed subsets of two similar documents' content have words in common, both these words are sent to the mapper with the two keys, resulting in the pair beeing evaluated twice. While here this behaviour is neglectable because the documents have few items and the similarity threshold is high (only one word is indexed for a line of 4), it might become a problem at a larger scale.
 
 ### Comparing the two methods
-Here are the performances of both methods:
-| Method              | Number of performed comparisons | Execution Time (sec.)  | Elapsed Time (sec.)  |
-| ------------------- | ------------------------------- | ---------------------- | -------------------- |
-| Paiwise comparison  | 499,500                         | 27                     | 21                   |
-| Inverted Index      | 276                             | 21                     | 15                   |
+Here are the summed up performances of both methods:
+
+Method              | Number of performed comparisons | Execution Time (sec.)  | Elapsed Time (sec.)
+------------------- | ------------------------------- | ---------------------- | -------------------
+Paiwise comparison  | 499,500                         | 27                     | 21                 
+Inverted Index      | 276                             | 21                     | 15                 
 
 We see that even on our small sample the difference in execution times is already significant (inverted indexing is 20% faster) as we have divided the number of comparison by almost 2,000!
 We also notice that maths still work as we do have n*(n-1)/2 pairwise comparison, which is extremely satisfying.
