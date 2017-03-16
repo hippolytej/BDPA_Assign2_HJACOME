@@ -303,7 +303,7 @@ public static class Reduce extends Reducer<Text, Text, Text, Text> {
 Here the idea is to avoid pointless comparisons by previously indexing the words: a given word is indexed with all the ids of the documents that contain it. This allows us to look for similar pairs only among the indexed ids of a given word. [Chaudhuri et al. 2006] have shown that, having sorted the words by incresing order of global frequency, it is sufficient to index only the |d| - ⌈t*|d|⌉ + 1 first words of a document, where t is the Jaccard similarity threshold (0.8 here) and |d| is the number of words in d.
 Here is our method:
 - Mapper: simply get the value's line id, parse and subset its content using [Chaudhuri et al. 2006]'s magical rule, and index each of the few chosen words with the id.
-- Reducer: From a given document's id, we have to be able to retrieve the content. The first step is thus to load the document ids and contents in a `keyWords` HashMap with the ``setup`` class. Then, for a given word, all the index ids are stored in the ``billyTheKeys`` list, that we go through with imbricated ``for`` loops to make the pairs. The latter are Jaccard-compared using the values from our ``keyWords`` HashMap, and bingos are outputed in the same fashion as above.
+- Reducer: From a given document's id, we have to be able to retrieve the content. The first step is thus to load the document ids and contents in a `keyWords` HashMap with the ``setup`` class. It is understood that this step might be impossible for large files, but here it allows for a quick and simple implementation of the inverted index method. Then, for a given word, all the index ids are stored in the ``billyTheKeys`` list, that we go through with imbricated ``for`` loops to make the pairs. The latter are Jaccard-compared using the values from our ``keyWords`` HashMap, and bingos are outputed in the same fashion as above.
 
 #### Mapper
 ```java
@@ -431,7 +431,7 @@ We also notice that maths still work as we do have n*(n-1)/2 pairwise comparison
 
 ## Conclusion
 In this assignment we have seen how Hadoop MapReduce can be efficiently used to perform set similarity joins, going from a naive approach to a more elaborate one.
-As peviously said there is room for improvement, starting with implementing a custom WritableComparable for key pairs and solving the duplicate problem of inverted indexing.
+As peviously said there is room for improvement, starting with implementing a custom WritableComparable for key pairs and implementing the inverted index in a more sophisticated way that would be suitable for large files and solve the duplicates problem.
 
 ## References
 >S. Chaudhuri, V. Ganti, and R. Kaushik. A primitive operator for similarity joins in data cleaning. In Proceedings of the 22nd International Conference on Data Engineering, ICDE 2006, 3-8 April 2006, Atlanta, GA, USA, page 5, 2006.
